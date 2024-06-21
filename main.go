@@ -30,12 +30,6 @@ type CleanedResponse struct {
 	CleanedBody string `json:"cleaned_body"`
 }
 
-var profaneWords = []string{
-	"kerfuffle",
-	"sharbert",
-	"fornax",
-}
-
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cfg.mu.Lock()
@@ -113,33 +107,64 @@ func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cleanedBody := replaceProfaneWords(chirpRequest.Body)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(CleanedResponse{CleanedBody: cleanedBody})
-
-}
-
-func replaceProfaneWords(text string) string {
-	for _, word := range profaneWords {
-		text = replaceWord(text, word)
-	}
-	return text
-}
-
-func replaceWord(text, word string) string {
-	replacements := []string{
-		word,
-		strings.ToTitle(word),
-		strings.ToUpper(word),
-		strings.ToLower(word),
+	type parameters struct {
+		Body string `json:"body"`
 	}
 
-	for _, replacement := range replacements {
-		text = strings.ReplaceAll(text, replacement, "****")
+	type returnVals struct {
+		CleanedBody string `json:"cleaned_body"`
 	}
 
-	return text
+	params := parameters{}
+
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
+	cleaned := getCleanedBody(params.Body, badWords)
+
+	respondWithJSON(w, http.StatusOK, returnVals{
+		CleanedBody: cleaned,
+	})
 }
+
+func getCleanedBody(body string, badWords map[string]struct{}) string {
+	words := strings.Split(body, " ")
+	for i, word := range words {
+		loweredWord := strings.ToLower(word)
+		if _, ok := badWords[loweredWord]; ok {
+			words[i] = "****"
+		}
+	}
+	cleaned := strings.Join(words, " ")
+	return cleaned
+}
+
+func respondWithError(w http.ResponseWriter, code int, msg string) {
+	if code > 499 {
+		log.Printf("Responding with 5XX error: %s", msg)
+	}
+	type errorResponse struct {
+		Error string `json:"error"`
+	}
+	respondWithJSON(w, code, errorResponse{
+		Error: msg,
+	})
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	dat, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+		w.WriteHeader(500)
+		return
+	}
+	w.WriteHeader(code)
+	w.Write(dat)
+}
+
 func main() {
 	const port = "8080"
 
