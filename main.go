@@ -121,10 +121,23 @@ func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
 
 func replaceProfaneWords(text string) string {
 	for _, word := range profaneWords {
-		text = strings.ReplaceAll(text, word, "****")
-		text = strings.ReplaceAll(text, strings.ToLower(word), "****")
-		text = strings.ReplaceAll(text, strings.ToUpper(word), "****")
+		text = replaceWord(text, word)
 	}
+	return text
+}
+
+func replaceWord(text, word string) string {
+	replacements := []string{
+		word,
+		strings.ToTitle(word),
+		strings.ToUpper(word),
+		strings.ToLower(word),
+	}
+
+	for _, replacement := range replacements {
+		text = strings.ReplaceAll(text, replacement, "****")
+	}
+
 	return text
 }
 
