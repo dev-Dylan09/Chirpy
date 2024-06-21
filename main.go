@@ -120,17 +120,33 @@ func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func replaceProfaneWords(text string) string {
-	words := strings.Fields(text)
+	words := strings.FieldsFunc(text, func(c rune) bool {
+		return c == ' ' || c == ',' || c == '.' || c == '!' || c == '?'
+	})
+
 	for i, word := range words {
 		lowercaseWord := strings.ToLower(word)
-		cleanWord := strings.Trim(lowercaseWord, ".,!?") // Strip punctuation for matching
 		for _, profaneWord := range profaneWords {
-			if cleanWord == profaneWord {
-				words[i] = strings.Replace(word, cleanWord, "****", 1)
+			if lowercaseWord == profaneWord {
+				words[i] = "****"
 			}
 		}
 	}
-	return strings.Join(words, " ")
+
+	// Reassemble the text with original spaces and punctuation
+	var cleanedText string
+	originalText := text
+	for _, word := range words {
+		index := strings.Index(originalText, word)
+		if index == -1 {
+			index = len(originalText)
+		}
+		cleanedText += originalText[:index] + word
+		originalText = originalText[index+len(word):]
+	}
+	cleanedText += originalText
+
+	return cleanedText
 }
 
 func main() {
