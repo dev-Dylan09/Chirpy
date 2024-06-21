@@ -32,7 +32,7 @@ type CleanedResponse struct {
 
 var profaneWords = []string{
 	"kerfuffle",
-	"Sharbert",
+	"sharbert",
 	"fornax",
 }
 
