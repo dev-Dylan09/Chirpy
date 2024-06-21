@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -112,36 +113,6 @@ func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(chirpRequest.Body) > 140 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Chirp is too long"})
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(ValidResponse{Valid: true})
-}
-
-func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	var chirpRequest ChirpRequest
-	err := json.NewDecoder(r.Body).Decode(&chirpRequest)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid request body"})
-		return
-	}
-
-	if len(chirpRequest.Body) > 140 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Chirp is too long"})
-		return
-	}
-
 	cleanedBody := replaceProfaneWords(chirpRequest.Body)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(CleanedResponse{CleanedBody: cleanedBody})
@@ -150,9 +121,9 @@ func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
 
 func replaceProfaneWords(text string) string {
 	for _, word := range profaneWords {
-		text = strings.ReplaceALL(text, word, "****")
-		text = strings.ReplaceALL(text, strings.Title(word), "****")
-		text = strings.ReplaceALL(text, strings.ToUpper(word), "****")
+		text = strings.ReplaceAll(text, word, "****")
+		text = strings.ReplaceAll(text, strings.Title(word), "****")
+		text = strings.ReplaceAll(text, strings.ToUpper(word), "****")
 	}
 	return text
 }
