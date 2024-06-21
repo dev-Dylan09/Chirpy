@@ -14,15 +14,25 @@ type apiConfig struct {
 }
 
 type ChirpRequest struct {
-	Body string 'json:"body"'
+	Body string `json:"body"`
 }
 
 type ErrorResponse struct {
-	Error string 'json:"error"'
+	Error string `json:"error"`
 }
 
 type ValidResponse struct {
-	Valid bool 'json:"valid"'
+	Valid bool `json:"valid"`
+}
+
+type CleanedResponse struct {
+	CleanedBody string `json:"cleaned_body"`
+}
+
+var profaneWords = []string{
+	"kerfuffle",
+	"Sharbert",
+	"fornax",
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -92,7 +102,7 @@ func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&chirpRequest)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encdoe(ErrorResponse{Error: "Invalid request body"})
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid request body"})
 		return
 	}
 
@@ -110,6 +120,41 @@ func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(ValidResponse{Valid: true})
+}
+
+func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var chirpRequest ChirpRequest
+	err := json.NewDecoder(r.Body).Decode(&chirpRequest)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid request body"})
+		return
+	}
+
+	if len(chirpRequest.Body) > 140 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Chirp is too long"})
+		return
+	}
+
+	cleanedBody := replaceProfaneWords(chirpRequest.Body)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(CleanedResponse{CleanedBody: cleanedBody})
+
+}
+
+func replaceProfaneWords(text string) string {
+	for _, word := range profaneWords {
+		text = strings.ReplaceALL(text, word, "****")
+		text = strings.ReplaceALL(text, strings.Title(word), "****")
+		text = strings.ReplaceALL(text, strings.ToUpper(word), "****")
+	}
+	return text
 }
 
 func main() {
@@ -136,6 +181,9 @@ func main() {
 	mux.HandleFunc("/api/reset", apiCfg.resetHandler)
 
 	mux.Handle("/", fileServer)
+
+	// validate chirp endpoint handler
+	mux.HandleFunc("/api/validate_chirp", validateChirpHandler)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
