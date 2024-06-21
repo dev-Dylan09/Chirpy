@@ -120,25 +120,17 @@ func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func replaceProfaneWords(text string) string {
-	for _, word := range profaneWords {
-		text = replaceWord(text, word)
+	words := strings.Fields(text)
+	for i, word := range words {
+		lowercaseWord := strings.ToLower(word)
+		cleanWord := strings.Trim(lowercaseWord, ".,!?") // Strip punctuation for matching
+		for _, profaneWord := range profaneWords {
+			if cleanWord == profaneWord {
+				words[i] = strings.Replace(word, cleanWord, "****", 1)
+			}
+		}
 	}
-	return text
-}
-
-func replaceWord(text, word string) string {
-	replacements := []string{
-		word,
-		strings.ToTitle(word),
-		strings.ToUpper(word),
-		strings.ToLower(word),
-	}
-
-	for _, replacement := range replacements {
-		text = strings.ReplaceAll(text, replacement, "****")
-	}
-
-	return text
+	return strings.Join(words, " ")
 }
 
 func main() {
