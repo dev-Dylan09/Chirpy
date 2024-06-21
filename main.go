@@ -40,6 +40,8 @@ func (cfg *apiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	const port = "8080"
 
+	apiCfg := &apiConfig{}
+
 	mux := http.NewServeMux()
 
 	// Readiness endpoint handler
@@ -52,6 +54,12 @@ func main() {
 	fileServer := http.FileServer(http.Dir("."))
 	// File server for the /app/* path
 	mux.Handle("/app/", http.StripPrefix("/app", fileServer))
+
+	// metrics endpoint handler
+	mux.HandleFunc("/metrics", apiCfg.metricsHandler)
+
+	// reset endpoint handler
+	mux.HandleFunc("/reset", apiCfg.resetHandler)
 
 	mux.Handle("/", fileServer)
 
