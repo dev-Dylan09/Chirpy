@@ -53,7 +53,7 @@ func main() {
 
 	fileServer := http.FileServer(http.Dir("."))
 	// File server for the /app/* path
-	mux.Handle("/app/", apiCFG.middlewareMetricsInc(http.StripPrefix("/app", fileServer))
+	mux.Handle("/app/", apiCFG.middlewareMetricsInc(http.StripPrefix("/app", fileServer)))
 
 	// metrics endpoint handler
 	mux.HandleFunc("/metrics", apiCfg.metricsHandler)
