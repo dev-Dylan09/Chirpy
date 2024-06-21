@@ -26,6 +26,16 @@ type ValidResponse struct {
 	Valid bool `json:"valid"`
 }
 
+type CleanedResponse struct {
+	CleanedBody string `json:"cleaned_body"`
+}
+
+var profaneWords = []string{
+	"kerfuffle",
+	"sharbert",
+	"fornax",
+}
+
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cfg.mu.Lock()
@@ -103,62 +113,21 @@ func validateChirpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type parameters struct {
-		Body string `json:"body"`
-	}
+	//w.WriteHeader(http.StatusOK)
+	//json.NewEncoder(w).Encode(ValidResponse{Valid: true})
 
-	type returnVals struct {
-		CleanedBody string `json:"cleaned_body"`
-	}
-
-	params := parameters{}
-
-	badWords := map[string]struct{}{
-		"kerfuffle": {},
-		"sharbert":  {},
-		"fornax":    {},
-	}
-	cleaned := getCleanedBody(params.Body, badWords)
-
-	respondWithJSON(w, http.StatusOK, returnVals{
-		CleanedBody: cleaned,
-	})
+	cleanedBody := replaceProfaneWords(chirpRequest.Body)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(CleanedResponse{CleanedBody: cleanedBody})
 }
 
-func respondWithError(w http.ResponseWriter, code int, msg string) {
-	if code > 499 {
-		log.Printf("Responding with 5XX error: %s", msg)
+func replaceProfaneWords(text string) string {
+	for _, word := range profaneWords {
+		text = strings.ReplaceAll(text, word, "****")
+		text = strings.ReplaceAll(text, strings.Title(word), "****")
+		text = strings.ReplaceAll(text, strings.ToUpper(word), "****")
 	}
-	type errorResponse struct {
-		Error string `json:"error"`
-	}
-	respondWithJSON(w, code, errorResponse{
-		Error: msg,
-	})
-}
-
-func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	dat, err := json.Marshal(payload)
-	if err != nil {
-		log.Printf("Error marshalling JSON: %s", err)
-		w.WriteHeader(500)
-		return
-	}
-	w.WriteHeader(code)
-	w.Write(dat)
-}
-
-func getCleanedBody(body string, badWords map[string]struct{}) string {
-	words := strings.Split(body, " ")
-	for i, word := range words {
-		loweredWord := strings.ToLower(word)
-		if _, ok := badWords[loweredWord]; ok {
-			words[i] = "****"
-		}
-	}
-	cleaned := strings.Join(words, " ")
-	return cleaned
+	return text
 }
 
 func main() {
