@@ -59,17 +59,17 @@ func main() {
 	mux := http.NewServeMux()
 
 	// readiness endpoint handler
-	mux.HandleFunc("/healthz", healthzHandler)
+	mux.HandleFunc("/api/healthz", healthzHandler)
 
 	fileServer := http.FileServer(http.Dir("."))
 	// File server for the /app/* path
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", fileServer)))
 
 	// metrics endpoint handler
-	mux.HandleFunc("/metrics", apiCfg.metricsHandler)
+	mux.HandleFunc("/api/metrics", apiCfg.metricsHandler)
 
 	// reset endpoint handler
-	mux.HandleFunc("/reset", apiCfg.resetHandler)
+	mux.HandleFunc("/api/reset", apiCfg.resetHandler)
 
 	mux.Handle("/", fileServer)
 
